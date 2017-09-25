@@ -1,2 +1,2 @@
 # phaserio-weatherman
-WeatherMan Example in phaserio.js
+WeatherMan Example in phaser.io
