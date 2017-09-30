@@ -1,6 +1,7 @@
-// declare const apiKey: string;
 "use strict";
-var weatherman_1 = require('./weatherman');
+// declare const apiKey: string;
+Object.defineProperty(exports, "__esModule", { value: true });
+var weatherman_1 = require("./weatherman");
 // class WeatherMan {
 //
 //     constructor() {
