@@ -6,8 +6,6 @@ export module Weatherman {
         platforms: Phaser.Group;
         cursors: Phaser.CursorKeys;
         player: Player;
-        playerBullets: Phaser.Group;
-        enemyBullets: Phaser.Group;
         enemies: any;
         enemiesTotal: number;
 
@@ -24,8 +22,13 @@ export module Weatherman {
             this.game.load.image('star', 'assets/star.png');
             this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
             this.game.load.image('bullet', 'assets/bullet.png');
-            this.game.load.image('stormcloud', 'assets/stormcloud.png');
+            this.game.load.image('stormcloud', 'assets/stormcloud3.png');
             this.game.load.image('lightning', 'assets/lightning.png');
+            this.game.load.image('sun', 'assets/sun.png');
+            this.game.load.image('sunray', 'assets/sun.png');
+            this.game.load.image('heatwave', 'assets/heatwave.png');
+            this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
+            this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
         }
 
         create() {
@@ -34,7 +37,6 @@ export module Weatherman {
             this.game.add.sprite(0, 0, 'sky');
 
             this.platforms = this.game.add.group();
-
             this.platforms.enableBody = true;
 
             let ground = this.platforms.create(0, this.game.world.height - 64, 'ground');
@@ -60,8 +62,6 @@ export module Weatherman {
                     )
                 );
             }
-
-            console.log(this.enemies);
 
             this.cursors = this.game.input.keyboard.createCursorKeys();
         }
@@ -108,7 +108,15 @@ export module Weatherman {
         }
     }
 
-    abstract class Character {
+    interface Fireable {
+        fire(game: Phaser.Game);
+    }
+
+    interface Updateable {
+        update(game: Phaser.Game);
+    }
+
+    abstract class Character implements Fireable, Updateable {
         name: string;
         hp: number;
         originalHp: number;
@@ -116,10 +124,17 @@ export module Weatherman {
         firstBullets: Phaser.Group;
         secondBullets: Phaser.Group;
         firstFireCoolDown: number;
+        firstBulletsMaxDamage: number;
+        secondBulletsMaxDamage: number;
         secondFireCoolDown: number;
+        explosionAnimation: any;
+        target: Character;
+        firstBulletsSpeed: number;
+        secondBulletsSpeed: number;
 
         abstract update(game: Phaser.Game);
         abstract fire(game: Phaser.Game);
+        abstract bulletHit(object, bullet);
 
         constructor(name: string, hp: number, sprite: Phaser.Sprite, game: Phaser.Game) {
             this.name = name;
@@ -133,35 +148,57 @@ export module Weatherman {
             this.resetSecondFireCoolDown(game);
         }
 
-        getSprite() : Phaser.Sprite {
+        public getSprite() : Phaser.Sprite {
             return this.sprite;
         }
 
-        getFirstBullets() : Phaser.Group {
+        public getFirstBullets() : Phaser.Group {
             return this.firstBullets;
         }
 
-        getSecondBullets() : Phaser.Group {
+        public getSecondBullets() : Phaser.Group {
             return this.secondBullets;
         }
 
-        resetFirstFireCoolDown(game: Phaser.Game) {
+        protected resetFirstFireCoolDown(game: Phaser.Game) {
             this.firstFireCoolDown = game.time.now + game.rnd.realInRange(0, 500);
         }
 
-        resetSecondFireCoolDown(game: Phaser.Game) {
-            this.secondFireCoolDown = game.time.now + game.rnd.realInRange(0, 1000);
+        protected resetSecondFireCoolDown(game: Phaser.Game) {
+            this.secondFireCoolDown = game.time.now + game.rnd.realInRange(0, 2000);
         }
 
-        canFire(game: Phaser.Game, fireCoolDown: number): boolean {
+        protected canFire(game: Phaser.Game, fireCoolDown: number): boolean {
             return game.time.now > fireCoolDown;
         }
-    }
 
-    abstract class Bullet {
-        x: number;
-        y: number;
-        speed: number;
+        protected fireFirst(game: Phaser.Game) {
+            if (this.target && this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
+                this.resetFirstFireCoolDown(game);
+
+                let bullet = this.firstBullets.getFirstExists(false);
+                bullet.___damage = game.rnd.realInRange(0, this.firstBulletsMaxDamage);
+                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+                    this.sprite.y + game.rnd.realInRange(0,this.sprite.height));
+
+                game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.firstBulletsSpeed);
+            }
+        }
+
+        protected fireSecond(game: Phaser.Game) {
+            if (this.target && this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
+                this.resetSecondFireCoolDown(game);
+
+                this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.target.getSprite()));
+
+                let bullet = this.secondBullets.getFirstExists(false);
+                bullet.___damage = game.rnd.realInRange(0, this.secondBulletsMaxDamage);
+                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+                    this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
+
+                game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.secondBulletsSpeed);
+            }
+        }
     }
 
     class Player extends Character {
@@ -178,7 +215,7 @@ export module Weatherman {
             this.firstBullets = game.add.group();
             this.firstBullets.enableBody = true;
             this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.firstBullets.createMultiple(10, 'bullet', 0, false);
+            this.firstBullets.createMultiple(1, 'bullet', 0, false);
             this.firstBullets.setAll('anchor.x', 0.5);
             this.firstBullets.setAll('anchor.y', 0.5);
             this.firstBullets.setAll('outOfBoundsKill', true);
@@ -235,13 +272,28 @@ export module Weatherman {
     }
 
     class Cloud extends Character {
-        player: Player;
+        currentTint: number;
 
         constructor(sprite: Phaser.Sprite, game: Phaser.Game, i: number, player: Player) {
             super("Cloud" + i, 200, sprite, game);
 
             this.sprite.body.collideWorldBounds = true;
-            this.player = player;
+            this.currentTint = 0x606060;
+            this.sprite.tint = this.currentTint;
+
+            this.firstFireCoolDown = game.rnd.realInRange(200, 500);
+            this.secondFireCoolDown = game.rnd.realInRange(600, 1000);
+
+            this.firstBulletsMaxDamage = game.rnd.realInRange(5, 10);
+            this.secondBulletsMaxDamage = game.rnd.realInRange(50, 100);
+
+            // let explosions = game.add.group();
+            //
+            //     var explosionAnimation = explosions.create(0, 0, 'kaboom', [0], false);
+            //     explosionAnimation.anchor.setTo(0.5, 0.5);
+            //     explosionAnimation.animations.add('kaboom');
+
+            this.target = player;
 
             this.firstBullets = game.add.group();
             this.firstBullets.enableBody = true;
@@ -265,32 +317,43 @@ export module Weatherman {
         }
 
         update(game: Phaser.Game) {
-            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
-            this.sprite.tint = 0xffffff;
+           if(this.hp <= 0) {
+               return;
+           }
+
+            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+            this.sprite.tint = this.currentTint;
 
             this.fire(game);
         }
 
         fire(game: Phaser.Game) {
-            if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
-                this.resetFirstFireCoolDown(game);
+            this.fireFirst(game);
+            this.fireSecond(game);
 
-                let bullet = this.firstBullets.getFirstExists(false);
-                bullet.___damage = game.rnd.realInRange(0, 10);
-                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
-                    this.sprite.y + game.rnd.realInRange(0,this.sprite.height));
-                bullet.rotation = game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 500);
-            }
-
-            if (this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
-                this.resetSecondFireCoolDown(game);
-
-                let bullet = this.secondBullets.getFirstExists(false);
-                bullet.___damage = game.rnd.realInRange(0, 50);
-                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
-                    this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
-                bullet.rotation = game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 400);
-            }
+            // if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
+            //     this.resetFirstFireCoolDown(game);
+            //
+            //     let bullet = this.firstBullets.getFirstExists(false);
+            //     bullet.___damage = game.rnd.realInRange(0, 10);
+            //     bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+            //         this.sprite.y + game.rnd.realInRange(0,this.sprite.height));
+            //
+            //    game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 500);
+            // }
+            //
+            // if (this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
+            //     this.resetSecondFireCoolDown(game);
+            //
+            //     this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.player.getSprite()));
+            //
+            //     let bullet = this.secondBullets.getFirstExists(false);
+            //     bullet.___damage = game.rnd.realInRange(0, 50);
+            //     bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+            //         this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
+            //
+            //     game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 1000);
+            // }
         }
 
         checkBulletHit(game: Phaser.Game, bullets: Phaser.Group) {
@@ -305,11 +368,18 @@ export module Weatherman {
             this.hp -= bullet.___damage;
 
             let scale: number = this.hp / this.originalHp;
+            scale = scale < .20 ? .20 : scale;
+            console.log('scale: ' + scale);
             this.sprite.scale.setTo(scale, scale);
+
+            let colorInverse = Math.round((1.0 - scale) * 255);
+            console.log('colorInverse: ' + colorInverse);
+
+            this.currentTint = Phaser.Color.toRGBA(colorInverse, colorInverse, colorInverse, 255);
 
             if (this.hp <= 0)
             {
-                this.sprite.kill();
+                // this.sprite.kill();
                 this.firstBullets.removeAll(true);
                 this.secondBullets.removeAll(true);
                 return true;
@@ -317,5 +387,95 @@ export module Weatherman {
 
             return false;
         }
+    }
+
+    class Sun extends Character {
+        currentTint: number;
+
+        constructor(sprite: Phaser.Sprite, game: Phaser.Game, i: number, player: Player) {
+            super("Cloud" + i, 200, sprite, game);
+
+            this.sprite.body.collideWorldBounds = true;
+            this.currentTint = 0xffffff;
+            this.sprite.tint = this.currentTint;
+
+            // let explosions = game.add.group();
+            //
+            //     var explosionAnimation = explosions.create(0, 0, 'kaboom', [0], false);
+            //     explosionAnimation.anchor.setTo(0.5, 0.5);
+            //     explosionAnimation.animations.add('kaboom');
+
+            this.target = player;
+
+            this.firstBullets = game.add.group();
+            this.firstBullets.enableBody = true;
+            this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            this.firstBullets.createMultiple(1, 'sunray');
+
+            this.firstBullets.setAll('anchor.x', 0.5);
+            this.firstBullets.setAll('anchor.y', 0.5);
+            this.firstBullets.setAll('outOfBoundsKill', true);
+            this.firstBullets.setAll('checkWorldBounds', true);
+
+            this.secondBullets = game.add.group();
+            this.secondBullets.enableBody = true;
+            this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            this.secondBullets.createMultiple(1, 'heatwave', 0, false);
+
+            this.secondBullets.setAll('anchor.x', 0.5);
+            this.secondBullets.setAll('anchor.y', 0.5);
+            this.secondBullets.setAll('outOfBoundsKill', true);
+            this.secondBullets.setAll('checkWorldBounds', true);
+        }
+
+        update(game: Phaser.Game) {
+            if(this.hp <= 0) {
+                return;
+            }
+
+            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+            this.sprite.tint = this.currentTint;
+
+            this.fire(game);
+        }
+
+        fire(game: Phaser.Game) {
+            this.fireFirst(game);
+            this.fireSecond(game);
+        }
+
+        checkBulletHit(game: Phaser.Game, bullets: Phaser.Group) {
+            game.physics.arcade.overlap(bullets, this.sprite, this.bulletHit, null, this);
+        }
+
+        bulletHit(object, bullet) {
+            console.log('sun.bulletHit');
+
+            bullet.kill();
+            this.sprite.tint = 0xa00000;
+            this.hp -= bullet.___damage;
+
+            // let scale: number = this.hp / this.originalHp;
+            // scale = scale < .20 ? .20 : scale;
+            // this.sprite.scale.setTo(scale, scale);
+            //
+            // let colorInverse = Math.round((1.0 - scale) * 255);
+            // this.currentTint = Phaser.Color.toRGBA(colorInverse, colorInverse, colorInverse, 255);
+
+            if (this.hp <= 0)
+            {
+                // this.sprite.kill();
+                this.firstBullets.removeAll(true);
+                this.secondBullets.removeAll(true);
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    class Building {
+        sprite: Phaser.Sprite;
+
     }
 }

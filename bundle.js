@@ -126,8 +126,13 @@ var Weatherman;
             this.game.load.image('star', 'assets/star.png');
             this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
             this.game.load.image('bullet', 'assets/bullet.png');
-            this.game.load.image('stormcloud', 'assets/stormcloud.png');
+            this.game.load.image('stormcloud', 'assets/stormcloud3.png');
             this.game.load.image('lightning', 'assets/lightning.png');
+            this.game.load.image('sun', 'assets/sun.png');
+            this.game.load.image('sunray', 'assets/sun.png');
+            this.game.load.image('heatwave', 'assets/heatwave.png');
+            this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
+            this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
         };
         Game.prototype.create = function () {
             this.game.physics.startSystem(Phaser.Physics.ARCADE);
@@ -143,7 +148,6 @@ var Weatherman;
             for (var i = 0; i < this.enemiesTotal; i++) {
                 this.enemies.push(new Cloud(this.game.add.sprite(200 * i + this.game.rnd.realInRange(0, 20), this.game.rnd.realInRange(0, 20), 'stormcloud'), this.game, i, this.player));
             }
-            console.log(this.enemies);
             this.cursors = this.game.input.keyboard.createCursorKeys();
         };
         Game.prototype.update = function () {
@@ -201,10 +205,29 @@ var Weatherman;
             this.firstFireCoolDown = game.time.now + game.rnd.realInRange(0, 500);
         };
         Character.prototype.resetSecondFireCoolDown = function (game) {
-            this.secondFireCoolDown = game.time.now + game.rnd.realInRange(0, 1000);
+            this.secondFireCoolDown = game.time.now + game.rnd.realInRange(0, 2000);
         };
         Character.prototype.canFire = function (game, fireCoolDown) {
             return game.time.now > fireCoolDown;
+        };
+        Character.prototype.fireFirst = function (game) {
+            if (this.target && this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
+                this.resetFirstFireCoolDown(game);
+                var bullet = this.firstBullets.getFirstExists(false);
+                bullet.___damage = game.rnd.realInRange(0, this.firstBulletsMaxDamage);
+                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width), this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
+                game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.firstBulletsSpeed);
+            }
+        };
+        Character.prototype.fireSecond = function (game) {
+            if (this.target && this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
+                this.resetSecondFireCoolDown(game);
+                this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.target.getSprite()));
+                var bullet = this.secondBullets.getFirstExists(false);
+                bullet.___damage = game.rnd.realInRange(0, this.secondBulletsMaxDamage);
+                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width), this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
+                game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.secondBulletsSpeed);
+            }
         };
         return Character;
     }());
@@ -225,7 +248,7 @@ var Weatherman;
             _this.firstBullets = game.add.group();
             _this.firstBullets.enableBody = true;
             _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            _this.firstBullets.createMultiple(10, 'bullet', 0, false);
+            _this.firstBullets.createMultiple(1, 'bullet', 0, false);
             _this.firstBullets.setAll('anchor.x', 0.5);
             _this.firstBullets.setAll('anchor.y', 0.5);
             _this.firstBullets.setAll('outOfBoundsKill', true);
@@ -276,7 +299,18 @@ var Weatherman;
         function Cloud(sprite, game, i, player) {
             var _this = _super.call(this, "Cloud" + i, 200, sprite, game) || this;
             _this.sprite.body.collideWorldBounds = true;
-            _this.player = player;
+            _this.currentTint = 0x606060;
+            _this.sprite.tint = _this.currentTint;
+            _this.firstFireCoolDown = game.rnd.realInRange(200, 500);
+            _this.secondFireCoolDown = game.rnd.realInRange(600, 1000);
+            _this.firstBulletsMaxDamage = game.rnd.realInRange(5, 10);
+            _this.secondBulletsMaxDamage = game.rnd.realInRange(50, 100);
+            // let explosions = game.add.group();
+            //
+            //     var explosionAnimation = explosions.create(0, 0, 'kaboom', [0], false);
+            //     explosionAnimation.anchor.setTo(0.5, 0.5);
+            //     explosionAnimation.animations.add('kaboom');
+            _this.target = player;
             _this.firstBullets = game.add.group();
             _this.firstBullets.enableBody = true;
             _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
@@ -296,25 +330,39 @@ var Weatherman;
             return _this;
         }
         Cloud.prototype.update = function (game) {
-            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
-            this.sprite.tint = 0xffffff;
+            if (this.hp <= 0) {
+                return;
+            }
+            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+            this.sprite.tint = this.currentTint;
             this.fire(game);
         };
         Cloud.prototype.fire = function (game) {
-            if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
-                this.resetFirstFireCoolDown(game);
-                var bullet = this.firstBullets.getFirstExists(false);
-                bullet.___damage = game.rnd.realInRange(0, 10);
-                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width), this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
-                bullet.rotation = game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 250);
-            }
-            if (this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
-                this.resetSecondFireCoolDown(game);
-                var bullet = this.secondBullets.getFirstExists(false);
-                bullet.___damage = game.rnd.realInRange(0, 50);
-                bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width), this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
-                bullet.rotation = game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 500);
-            }
+            this.fireFirst(game);
+            this.fireSecond(game);
+            // if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
+            //     this.resetFirstFireCoolDown(game);
+            //
+            //     let bullet = this.firstBullets.getFirstExists(false);
+            //     bullet.___damage = game.rnd.realInRange(0, 10);
+            //     bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+            //         this.sprite.y + game.rnd.realInRange(0,this.sprite.height));
+            //
+            //    game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 500);
+            // }
+            //
+            // if (this.canFire(game, this.secondFireCoolDown) && this.secondBullets.countDead() > 0) {
+            //     this.resetSecondFireCoolDown(game);
+            //
+            //     this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.player.getSprite()));
+            //
+            //     let bullet = this.secondBullets.getFirstExists(false);
+            //     bullet.___damage = game.rnd.realInRange(0, 50);
+            //     bullet.reset(this.sprite.x + game.rnd.realInRange(0, this.sprite.width),
+            //         this.sprite.y + game.rnd.realInRange(0, this.sprite.height));
+            //
+            //     game.physics.arcade.moveToObject(bullet, this.player.getSprite(), 1000);
+            // }
         };
         Cloud.prototype.checkBulletHit = function (game, bullets) {
             game.physics.arcade.overlap(bullets, this.sprite, this.bulletHit, null, this);
@@ -325,9 +373,14 @@ var Weatherman;
             this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
             var scale = this.hp / this.originalHp;
+            scale = scale < .20 ? .20 : scale;
+            console.log('scale: ' + scale);
             this.sprite.scale.setTo(scale, scale);
+            var colorInverse = Math.round((1.0 - scale) * 255);
+            console.log('colorInverse: ' + colorInverse);
+            this.currentTint = Phaser.Color.toRGBA(colorInverse, colorInverse, colorInverse, 255);
             if (this.hp <= 0) {
-                this.sprite.kill();
+                // this.sprite.kill();
                 this.firstBullets.removeAll(true);
                 this.secondBullets.removeAll(true);
                 return true;
@@ -335,6 +388,73 @@ var Weatherman;
             return false;
         };
         return Cloud;
+    }(Character));
+    var Sun = /** @class */ (function (_super) {
+        __extends(Sun, _super);
+        function Sun(sprite, game, i, player) {
+            var _this = _super.call(this, "Cloud" + i, 200, sprite, game) || this;
+            _this.sprite.body.collideWorldBounds = true;
+            _this.currentTint = 0xffffff;
+            _this.sprite.tint = _this.currentTint;
+            // let explosions = game.add.group();
+            //
+            //     var explosionAnimation = explosions.create(0, 0, 'kaboom', [0], false);
+            //     explosionAnimation.anchor.setTo(0.5, 0.5);
+            //     explosionAnimation.animations.add('kaboom');
+            _this.target = player;
+            _this.firstBullets = game.add.group();
+            _this.firstBullets.enableBody = true;
+            _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.firstBullets.createMultiple(1, 'sunray');
+            _this.firstBullets.setAll('anchor.x', 0.5);
+            _this.firstBullets.setAll('anchor.y', 0.5);
+            _this.firstBullets.setAll('outOfBoundsKill', true);
+            _this.firstBullets.setAll('checkWorldBounds', true);
+            _this.secondBullets = game.add.group();
+            _this.secondBullets.enableBody = true;
+            _this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.secondBullets.createMultiple(1, 'heatwave', 0, false);
+            _this.secondBullets.setAll('anchor.x', 0.5);
+            _this.secondBullets.setAll('anchor.y', 0.5);
+            _this.secondBullets.setAll('outOfBoundsKill', true);
+            _this.secondBullets.setAll('checkWorldBounds', true);
+            return _this;
+        }
+        Sun.prototype.update = function (game) {
+            if (this.hp <= 0) {
+                return;
+            }
+            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+            this.sprite.tint = this.currentTint;
+            this.fire(game);
+        };
+        Sun.prototype.fire = function (game) {
+            this.fireFirst(game);
+            this.fireSecond(game);
+        };
+        Sun.prototype.checkBulletHit = function (game, bullets) {
+            game.physics.arcade.overlap(bullets, this.sprite, this.bulletHit, null, this);
+        };
+        Sun.prototype.bulletHit = function (object, bullet) {
+            console.log('sun.bulletHit');
+            bullet.kill();
+            this.sprite.tint = 0xa00000;
+            this.hp -= bullet.___damage;
+            // let scale: number = this.hp / this.originalHp;
+            // scale = scale < .20 ? .20 : scale;
+            // this.sprite.scale.setTo(scale, scale);
+            //
+            // let colorInverse = Math.round((1.0 - scale) * 255);
+            // this.currentTint = Phaser.Color.toRGBA(colorInverse, colorInverse, colorInverse, 255);
+            if (this.hp <= 0) {
+                // this.sprite.kill();
+                this.firstBullets.removeAll(true);
+                this.secondBullets.removeAll(true);
+                return true;
+            }
+            return false;
+        };
+        return Sun;
     }(Character));
 })(Weatherman = exports.Weatherman || (exports.Weatherman = {}));
 

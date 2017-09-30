@@ -1,0 +1,36 @@
+{"frames": [
+
+{
+	"filename": "building3.png",
+	"frame": {"x":0,"y":0,"w":309,"h":163},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":309,"h":163},
+	"sourceSize": {"w":309,"h":163}
+},
+{
+	"filename": "building4.png",
+	"frame": {"x":309,"y":0,"w":225,"h":225},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":225,"h":225},
+	"sourceSize": {"w":225,"h":225}
+},
+{
+	"filename": "building5.png",
+	"frame": {"x":534,"y":0,"w":232,"h":217},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":232,"h":217},
+	"sourceSize": {"w":232,"h":217}
+}],
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "buildings.png",
+	"format": "RGBA8888",
+	"size": {"w":766,"h":225},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:6835ee46ae37b2532c73be50b1c39194:cb7612d51f123d0a1860870ab10fc47b:8f670863a0ac9ac15291caba2801fd50$"
+}
+}
