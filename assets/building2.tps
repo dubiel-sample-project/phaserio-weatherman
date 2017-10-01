@@ -36,7 +36,7 @@
         <key>dataFormat</key>
         <string>phaser-json-array</string>
         <key>textureFileName</key>
-        <filename>building2.png</filename>
+        <filename></filename>
         <key>flipPVR</key>
         <false/>
         <key>pvrCompressionQuality</key>
@@ -58,7 +58,7 @@
         <key>jxrCompressionLevel</key>
         <uint>0</uint>
         <key>ditherType</key>
-        <enum type="SettingsBase::DitherType">PngQuantLow</enum>
+        <enum type="SettingsBase::DitherType">NearestNeighbour</enum>
         <key>backgroundColor</key>
         <uint>0</uint>
         <key>libGdx</key>
@@ -199,9 +199,23 @@
         </struct>
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap">
-            <key type="filename">building2.png</key>
-            <key type="filename">building2a.png</key>
-            <key type="filename">building2b.png</key>
+            <key type="filename">building2_1.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0.5,0.5</point_f>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>21,58,41,115</rect>
+                <key>scale9Paddings</key>
+                <rect>21,58,41,115</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">building2_2.png</key>
+            <key type="filename">building2_3.png</key>
+            <key type="filename">building2_4.png</key>
+            <key type="filename">building2_5.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0.5,0.5</point_f>
@@ -217,9 +231,11 @@
         </map>
         <key>fileList</key>
         <array>
-            <filename>building2a.png</filename>
-            <filename>building2b.png</filename>
-            <filename>building2.png</filename>
+            <filename>building2_1.png</filename>
+            <filename>building2_2.png</filename>
+            <filename>building2_3.png</filename>
+            <filename>building2_4.png</filename>
+            <filename>building2_5.png</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>

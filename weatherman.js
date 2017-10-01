@@ -32,8 +32,8 @@ var Weatherman;
             this.game.load.image('stormcloud', 'assets/stormcloud3.png');
             this.game.load.image('lightning', 'assets/lightning.png');
             this.game.load.image('sun', 'assets/sun.png');
-            this.game.load.image('sunray', 'assets/sun.png');
-            this.game.load.image('heatwave', 'assets/heatwave.png');
+            this.game.load.image('sunray', 'assets/sunray.png');
+            this.game.load.image('heatwave', 'assets/heatwave2.png');
             this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
             this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
         };
@@ -46,7 +46,8 @@ var Weatherman;
             ground.scale.setTo(2, 2);
             ground.body.immovable = true;
             this.player = new Player(this.game.add.sprite(32, this.game.world.height - 150, 'weatherman'), this.game);
-            this.scene = new CloudScene(this.player, this.game);
+            // this.scene = new CloudScene(this.player, this.game);
+            this.scene = new SunScene(this.player, this.game);
             this.player.getSprite().bringToTop();
             this.cursors = this.game.input.keyboard.createCursorKeys();
         };
@@ -123,7 +124,7 @@ var Weatherman;
                 this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.target.getSprite()));
                 var bullet = this.secondBullets.getFirstExists(false);
                 bullet.___damage = game.rnd.between(0, this.secondBulletsMaxDamage);
-                bullet.reset(this.sprite.x + game.rnd.between(0, this.sprite.width), this.sprite.y + game.rnd.between(0, this.sprite.height));
+                bullet.reset(this.sprite.x + this.sprite.width / 2, this.sprite.y + this.sprite.height / 2);
                 game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.secondBulletsSpeed);
             }
         };
@@ -285,8 +286,6 @@ var Weatherman;
             game.physics.arcade.overlap(bullets, this.sprite, this.bulletHit, null, this);
         };
         Cloud.prototype.bulletHit = function (object, bullet) {
-            // console.log('cloud.bulletHit');
-            // console.log(typeof bullet);
             bullet.kill();
             this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
@@ -296,7 +295,6 @@ var Weatherman;
             var newTint = Math.round((1.0 - scale) * (255 - 96) + 96);
             this.currentTint = Game.rgb2hex(newTint, newTint, newTint);
             if (this.hp <= 0) {
-                // this.sprite.kill();
                 this.firstBullets.removeAll(true);
                 this.secondBullets.removeAll(true);
                 return true;
@@ -307,21 +305,24 @@ var Weatherman;
     }(Character));
     var Sun = /** @class */ (function (_super) {
         __extends(Sun, _super);
-        function Sun(sprite, game, i, player) {
+        function Sun(sprite, game, i, player, buildings) {
             var _this = _super.call(this, "Sun" + i, 500, sprite, game) || this;
-            _this.sprite.body.collideWorldBounds = true;
+            // this.sprite.body.collideWorldBounds = true;
             _this.currentTint = 0xffffff;
             _this.sprite.tint = _this.currentTint;
+            _this.sprite.anchor.setTo(0.5, 0.5);
             // let explosions = game.add.group();
             //
             //     var explosionAnimation = explosions.create(0, 0, 'kaboom', [0], false);
             //     explosionAnimation.anchor.setTo(0.5, 0.5);
             //     explosionAnimation.animations.add('kaboom');
             _this.target = player;
+            _this.player = player;
+            _this.buildings = buildings;
             _this.firstBullets = game.add.group();
             _this.firstBullets.enableBody = true;
             _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            _this.firstBullets.createMultiple(1, 'sunray');
+            _this.firstBullets.createMultiple(12, 'sunray');
             _this.firstBullets.setAll('anchor.x', 0.5);
             _this.firstBullets.setAll('anchor.y', 0.5);
             _this.firstBullets.setAll('outOfBoundsKill', true);
@@ -337,12 +338,27 @@ var Weatherman;
             return _this;
         }
         Sun.prototype.setCoolDownPauses = function (game) {
-            this.firstFireCoolDownPause = game.rnd.between(200, 500);
+            this.firstFireCoolDownPause = game.rnd.between(500, 1000);
             this.secondFireCoolDownPause = game.rnd.between(600, 1000);
+        };
+        Sun.prototype.fireFirst = function (game) {
+            if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
+                this.resetFirstFireCoolDown(game);
+                this.firstBullets.forEach(function (bullet) {
+                    console.log(bullet);
+                }, this);
+            }
         };
         Sun.prototype.update = function (game) {
             if (this.hp <= 0) {
                 return;
+            }
+            this.sprite.rotation += 0.005;
+            this.target = this.player;
+            if ((game.rnd.between(1, 5) % 2) != 0) {
+                var length_2 = this.buildings.length;
+                var index = game.rnd.between(0, length_2 - 1);
+                this.target = this.buildings[index];
             }
             game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
             this.sprite.tint = this.currentTint;
@@ -436,8 +452,9 @@ var Weatherman;
         function SunScene(player, game) {
             var _this = _super.call(this, player, game) || this;
             _this.enemiesTotal = 1;
+            _this.buildings.push(new Building('2', game));
             for (var i = 0; i < _this.enemiesTotal; i++) {
-                _this.enemies.push(new Sun(game.add.sprite(0, -300, 'sun'), game, i, player));
+                _this.enemies.push(new Sun(game.add.sprite(300, 0, 'sun'), game, i, player, _this.buildings));
             }
             return _this;
         }
