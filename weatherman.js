@@ -1,13 +1,19 @@
-/// <reference path="phaser.d.ts" />
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+/// <reference path="phaser.d.ts" />
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var Weatherman;
 (function (Weatherman) {
-    var Game = (function () {
+    var Game = /** @class */ (function () {
         function Game() {
             this.game = new Phaser.Game(800, 600, Phaser.AUTO, 'content', { preload: this.preload, create: this.create, update: this.update });
         }
@@ -27,7 +33,9 @@ var Weatherman;
             this.game.load.image('sunray', 'assets/sunray3.png');
             this.game.load.image('heatwave', 'assets/heatwave2.png');
             this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
+            this.game.load.atlas('building1', 'assets/building1.png', 'assets/building1.json');
             this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
+            this.game.load.atlas('building4', 'assets/building4.png', 'assets/building4.json');
             this.game.load.atlas('building5', 'assets/building5.png', 'assets/building5.json');
             this.game.load.atlas('building7', 'assets/building7.png', 'assets/building7.json');
         };
@@ -71,7 +79,7 @@ var Weatherman;
         return Game;
     }());
     Weatherman.Game = Game;
-    var Explodable = (function () {
+    var Explodable = /** @class */ (function () {
         function Explodable() {
         }
         Explodable.prototype.createExplosion = function (game) {
@@ -89,7 +97,7 @@ var Weatherman;
         };
         return Explodable;
     }());
-    var Character = (function () {
+    var Character = /** @class */ (function () {
         function Character(name, hp, sprite, game) {
             this.name = name;
             this.hp = hp;
@@ -123,6 +131,8 @@ var Weatherman;
         Character.prototype.kill = function () {
             this.hp = 0;
             this.sprite.kill();
+            this.firstBullets.removeAll(true);
+            this.secondBullets.removeAll(true);
         };
         Character.prototype.canFire = function (game, fireCoolDown) {
             return game.time.now > fireCoolDown;
@@ -155,7 +165,7 @@ var Weatherman;
         };
         return Character;
     }());
-    var Scene = (function () {
+    var Scene = /** @class */ (function () {
         function Scene(player, game) {
             this.player = player;
             this.enemies = [];
@@ -168,6 +178,10 @@ var Weatherman;
         }
         Scene.prototype.update = function (game) {
             if (!this.running) {
+                return;
+            }
+            if (!this.player.isAlive()) {
+                this.gameLost(game);
                 return;
             }
             var enemiesAlive = false;
@@ -183,11 +197,8 @@ var Weatherman;
             }
             if (!enemiesAlive) {
                 console.log('you won');
-                this.stop(game);
-                game.camera.fade(0x000000);
-                game.camera.onFadeComplete.add(function () {
-                    game.debug.text('You lost!', 10, 10, '#ffffff');
-                });
+                this.gameWon(game);
+                return;
             }
             var buildingsAlive = false;
             for (var _b = 0, _c = this.buildings; _b < _c.length; _b++) {
@@ -197,12 +208,8 @@ var Weatherman;
             }
             if (!buildingsAlive) {
                 console.log('you lost');
-                this.stop(game);
-                game.camera.fade(0x000000);
-                game.camera.onFadeComplete.add(function () {
-                    // game.debug.text('You lost!', 10, 10, '#ffffff');
-                    game.add.text(50, 50, 'You lost!', { 'fontSize': 32 });
-                });
+                this.gameLost(game);
+                return;
             }
         };
         Scene.prototype.stop = function (game) {
@@ -213,27 +220,49 @@ var Weatherman;
                 enemy.kill();
             }
         };
+        Scene.prototype.gameWon = function (game) {
+            this.stop(game);
+            var style = { font: "bold 32px Arial", fill: "#000", boundsAlignH: "center", boundsAlignV: "middle" };
+            var text = game.add.text(0, 0, "You have won! The city is saved!", style);
+            text.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
+            text.setTextBounds(0, 100, 800, 100);
+            var text2 = game.add.text(0, 0, "The people rejoice!", style);
+            text2.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
+            text2.setTextBounds(0, 200, 800, 100);
+        };
+        Scene.prototype.gameLost = function (game) {
+            this.stop(game);
+            var style = { font: "bold 32px Arial", fill: "#000", boundsAlignH: "center", boundsAlignV: "middle" };
+            var text = game.add.text(0, 0, "You have lost! The city is destroyed!", style);
+            text.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
+            text.setTextBounds(0, 100, 800, 100);
+            var text2 = game.add.text(0, 0, "But the sun will rise and tomorrow is another day!", style);
+            text2.setShadow(3, 3, 'rgba(0,0,0,0.5)', 2);
+            text2.setTextBounds(0, 200, 800, 100);
+        };
         return Scene;
     }());
-    var Player = (function (_super) {
+    var Player = /** @class */ (function (_super) {
         __extends(Player, _super);
         function Player(sprite, game) {
-            _super.call(this, "WeatherMan", 100, sprite, game);
-            this.sprite.body.bounce.y = 0.2;
-            this.sprite.body.gravity.y = 300;
-            this.sprite.body.collideWorldBounds = true;
-            this.sprite.animations.add('left', [0, 1, 2, 3], 10, true);
-            this.sprite.animations.add('right', [5, 6, 7, 8], 10, true);
-            this.firstBulletsMaxDamage = game.rnd.between(20, 50);
-            this.firstBulletsSpeed = 400;
-            this.firstBullets = game.add.group();
-            this.firstBullets.enableBody = true;
-            this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.firstBullets.createMultiple(1, 'bullet', 0, false);
-            this.firstBullets.setAll('anchor.x', 0.5);
-            this.firstBullets.setAll('anchor.y', 0.5);
-            this.firstBullets.setAll('outOfBoundsKill', true);
-            this.firstBullets.setAll('checkWorldBounds', true);
+            var _this = _super.call(this, "WeatherMan", game.rnd.between(1000, 2000), sprite, game) || this;
+            _this.sprite.body.bounce.y = 0.2;
+            _this.sprite.body.gravity.y = 300;
+            _this.sprite.body.collideWorldBounds = true;
+            _this.sprite.animations.add('left', [0, 1, 2, 3], 10, true);
+            _this.sprite.animations.add('right', [5, 6, 7, 8], 10, true);
+            _this.firstBulletsMaxDamage = game.rnd.between(20, 50);
+            _this.firstBulletsSpeed = 400;
+            _this.firstBullets = game.add.group();
+            _this.firstBullets.enableBody = true;
+            _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.firstBullets.createMultiple(1, 'bullet', 0, false);
+            _this.firstBullets.setAll('anchor.x', 0.5);
+            _this.firstBullets.setAll('anchor.y', 0.5);
+            _this.firstBullets.setAll('outOfBoundsKill', true);
+            _this.firstBullets.setAll('checkWorldBounds', true);
+            _this.secondBullets = game.add.group();
+            return _this;
         }
         Player.prototype.setCoolDownPauses = function (game) {
             this.firstFireCoolDownPause = game.rnd.between(100, 200);
@@ -246,15 +275,21 @@ var Weatherman;
             if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
                 this.resetFirstFireCoolDown(game);
                 var bullet = this.firstBullets.getFirstExists(false);
+                bullet.lifespan = 300;
                 bullet.___damage = game.rnd.between(10, 20);
                 bullet.reset(this.sprite.x, this.sprite.y);
-                bullet.rotation = game.physics.arcade.moveToPointer(bullet, 1000, game.input.activePointer, 500);
+                bullet.rotation = game.physics.arcade.moveToPointer(bullet, 1000, game.input.activePointer);
             }
         };
         Player.prototype.bulletHit = function (object, bullet) {
             console.log('player.bulletHit');
             bullet.kill();
             this.sprite.tint = 0xa00000;
+            this.hp -= bullet.___damage;
+            if (this.hp <= 0) {
+                this.playExplosion(this.sprite.x, this.sprite.y);
+                this.kill();
+            }
         };
         Player.prototype.move = function (velocity, direction) {
             this.sprite.body.velocity.x = velocity;
@@ -272,41 +307,42 @@ var Weatherman;
         };
         return Player;
     }(Character));
-    var Cloud = (function (_super) {
+    var Cloud = /** @class */ (function (_super) {
         __extends(Cloud, _super);
         function Cloud(sprite, game, i, player, buildings) {
-            _super.call(this, "Cloud" + i, 200, sprite, game);
-            this.sprite.body.collideWorldBounds = true;
-            this.currentTint = Game.rgb2hex(96, 96, 96);
-            this.sprite.tint = this.currentTint;
-            this.sprite.anchor.setTo(0.5, 0.5);
-            this.firstBulletsMaxDamage = game.rnd.between(5, 10);
-            this.secondBulletsMaxDamage = game.rnd.between(50, 100);
-            this.firstBulletsSpeed = 400;
-            this.secondBulletsSpeed = 600;
-            this.player = player;
-            this.target = player;
-            this.buildings = buildings;
-            this.firstBullets = game.add.group();
-            this.firstBullets.enableBody = true;
-            this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.firstBullets.createMultiple(1, 'raindrop');
-            this.firstBullets.setAll('anchor.x', 0.5);
-            this.firstBullets.setAll('anchor.y', 0.5);
-            this.firstBullets.setAll('outOfBoundsKill', true);
-            this.firstBullets.setAll('checkWorldBounds', true);
-            this.secondBullets = game.add.group();
-            this.secondBullets.enableBody = true;
-            this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.secondBullets.createMultiple(1, 'lightning', 0, false);
-            this.secondBullets.setAll('anchor.x', 0.5);
-            this.secondBullets.setAll('anchor.y', 0.5);
-            this.secondBullets.setAll('outOfBoundsKill', true);
-            this.secondBullets.setAll('checkWorldBounds', true);
+            var _this = _super.call(this, "Cloud" + i, 200, sprite, game) || this;
+            _this.sprite.body.collideWorldBounds = true;
+            _this.currentTint = Game.rgb2hex(96, 96, 96);
+            _this.sprite.tint = _this.currentTint;
+            _this.sprite.anchor.setTo(0.5, 0.5);
+            _this.firstBulletsMaxDamage = game.rnd.between(5, 10);
+            _this.secondBulletsMaxDamage = game.rnd.between(50, 100);
+            _this.firstBulletsSpeed = 400;
+            _this.secondBulletsSpeed = 600;
+            _this.player = player;
+            _this.target = player;
+            _this.buildings = buildings;
+            _this.firstBullets = game.add.group();
+            _this.firstBullets.enableBody = true;
+            _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.firstBullets.createMultiple(1, 'raindrop');
+            _this.firstBullets.setAll('anchor.x', 0.5);
+            _this.firstBullets.setAll('anchor.y', 0.5);
+            _this.firstBullets.setAll('outOfBoundsKill', true);
+            _this.firstBullets.setAll('checkWorldBounds', true);
+            _this.secondBullets = game.add.group();
+            _this.secondBullets.enableBody = true;
+            _this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.secondBullets.createMultiple(1, 'lightning', 0, false);
+            _this.secondBullets.setAll('anchor.x', 0.5);
+            _this.secondBullets.setAll('anchor.y', 0.5);
+            _this.secondBullets.setAll('outOfBoundsKill', true);
+            _this.secondBullets.setAll('checkWorldBounds', true);
+            return _this;
         }
         Cloud.prototype.setCoolDownPauses = function (game) {
-            this.firstFireCoolDownPause = game.rnd.between(300, 600);
-            this.secondFireCoolDownPause = game.rnd.between(3000, 5000);
+            this.firstFireCoolDownPause = game.rnd.between(100, 400);
+            this.secondFireCoolDownPause = game.rnd.between(1000, 3000);
         };
         Cloud.prototype.update = function (game) {
             if (!this.isAlive()) {
@@ -314,9 +350,10 @@ var Weatherman;
             }
             this.target = this.player;
             if ((game.rnd.between(1, 5) % 2) != 0) {
-                var length_1 = this.buildings.length;
-                var index = game.rnd.between(0, length_1 - 1);
-                this.target = this.buildings[index];
+                this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
+                if (!this.target.isAlive()) {
+                    this.target = this.player;
+                }
             }
             game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
             game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
@@ -331,52 +368,53 @@ var Weatherman;
             this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
             var scale = this.hp / this.originalHp;
-            scale = scale < .25 ? .25 : scale;
+            scale = scale < .10 ? .10 : scale;
             this.sprite.scale.setTo(scale, scale);
             var newTint = Math.round((1.0 - scale) * (255 - 96) + 96);
             this.currentTint = Game.rgb2hex(newTint, newTint, newTint);
             if (this.hp <= 0) {
-                this.firstBullets.removeAll(true);
-                this.secondBullets.removeAll(true);
+                this.playExplosion(this.sprite.x, this.sprite.y);
+                this.kill();
                 return true;
             }
             return false;
         };
         return Cloud;
     }(Character));
-    var Sun = (function (_super) {
+    var Sun = /** @class */ (function (_super) {
         __extends(Sun, _super);
         function Sun(sprite, game, i, player, buildings) {
-            _super.call(this, "Sun" + i, 500, sprite, game);
-            this.currentTint = 0xffffff;
-            this.sprite.tint = this.currentTint;
-            this.sprite.anchor.setTo(0.5, 0.5);
-            this.rotationSpeed = 0.025;
-            this.rotationSpeedIncrementor = 0.005;
-            this.firstBulletsMaxDamage = game.rnd.between(50, 100);
-            this.secondBulletsMaxDamage = game.rnd.between(100, 300);
-            this.firstBulletsSpeed = 400;
-            this.secondBulletsSpeed = 360;
-            this.target = player;
-            this.player = player;
-            this.buildings = buildings;
-            this.firstBullets = game.add.group();
-            this.firstBullets.enableBody = true;
-            this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.firstBullets.createMultiple(12, 'sunray');
-            this.firstBullets.setAll('anchor.x', 0.5);
-            this.firstBullets.setAll('anchor.y', 0.5);
-            this.firstBullets.setAll('outOfBoundsKill', true);
-            this.firstBullets.setAll('checkWorldBounds', true);
-            this.secondBullets = game.add.group();
-            this.secondBullets.enableBody = true;
-            this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
-            this.secondBullets.createMultiple(1, 'heatwave', 0, false);
-            this.secondBullets.setAll('anchor.x', 0.5);
-            this.secondBullets.setAll('anchor.y', 0.5);
-            this.secondBullets.setAll('outOfBoundsKill', true);
-            this.secondBullets.setAll('checkWorldBounds', true);
-            this.sprite.bringToTop();
+            var _this = _super.call(this, "Sun" + i, game.rnd.between(500, 1000), sprite, game) || this;
+            _this.currentTint = 0xffffff;
+            _this.sprite.tint = _this.currentTint;
+            _this.sprite.anchor.setTo(0.5, 0.5);
+            _this.rotationSpeed = 0.025;
+            _this.rotationSpeedIncrementor = 0.005;
+            _this.firstBulletsMaxDamage = game.rnd.between(20, 50);
+            _this.secondBulletsMaxDamage = game.rnd.between(50, 150);
+            _this.firstBulletsSpeed = 400;
+            _this.secondBulletsSpeed = 360;
+            _this.target = player;
+            _this.player = player;
+            _this.buildings = buildings;
+            _this.firstBullets = game.add.group();
+            _this.firstBullets.enableBody = true;
+            _this.firstBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.firstBullets.createMultiple(12, 'sunray');
+            _this.firstBullets.setAll('anchor.x', 0.5);
+            _this.firstBullets.setAll('anchor.y', 0.5);
+            _this.firstBullets.setAll('outOfBoundsKill', true);
+            _this.firstBullets.setAll('checkWorldBounds', true);
+            _this.secondBullets = game.add.group();
+            _this.secondBullets.enableBody = true;
+            _this.secondBullets.physicsBodyType = Phaser.Physics.ARCADE;
+            _this.secondBullets.createMultiple(1, 'heatwave', 0, false);
+            _this.secondBullets.setAll('anchor.x', 0.5);
+            _this.secondBullets.setAll('anchor.y', 0.5);
+            _this.secondBullets.setAll('outOfBoundsKill', true);
+            _this.secondBullets.setAll('checkWorldBounds', true);
+            _this.sprite.bringToTop();
+            return _this;
         }
         Sun.prototype.setCoolDownPauses = function (game) {
             this.firstFireCoolDownPause = game.rnd.between(1200, 1600);
@@ -415,10 +453,15 @@ var Weatherman;
                 game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
             }
             else {
+                var temp = [];
                 for (var _i = 0, _a = this.buildings; _i < _a.length; _i++) {
                     var building = _a[_i];
+                    if (building.isAlive()) {
+                        temp.push(building);
+                    }
                     game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
                 }
+                // this.buildings = temp;
             }
             this.fireFirst(game);
         };
@@ -445,19 +488,17 @@ var Weatherman;
             this.sprite.scale.setTo(scale, scale);
             if (this.hp <= 0) {
                 this.playExplosion(this.sprite.x, this.sprite.y);
-                this.sprite.kill();
-                this.firstBullets.removeAll(true);
-                this.secondBullets.removeAll(true);
+                this.kill();
                 return true;
             }
             return false;
         };
         return Sun;
     }(Character));
-    var Building = (function () {
+    var Building = /** @class */ (function () {
         function Building(id, x, game) {
             this.id = id;
-            this.hp = game.rnd.between(1000, 5000);
+            this.hp = game.rnd.between(100, 300);
             this.originalHp = this.hp;
             this.sprite = game.add.sprite(x, 0, 'building' + this.id, 'building' + this.id + '_1.png');
             this.sprite.y = game.world.height - 64 - this.sprite.height;
@@ -481,10 +522,10 @@ var Weatherman;
             this.hp -= bullet.___damage;
             this.playExplosion(this.sprite.x + this.sprite.width / 2, this.sprite.y + this.sprite.height / 2);
             switch (true) {
-                case this.hp < (0.1 * this.originalHp):
+                case this.hp <= 0:
                     this.sprite.frameName = 'building' + this.id + '_5.png';
                     break;
-                case this.hp < (0.3 * this.originalHp):
+                case this.hp < (0.2 * this.originalHp):
                     this.sprite.frameName = 'building' + this.id + '_4.png';
                     break;
                 case this.hp < (0.6 * this.originalHp):
@@ -501,30 +542,34 @@ var Weatherman;
             return false;
         };
         Building.layoutPresets = [
-            { '2': 50, '5': 200, '7': 500 },
+            { '2': 20, '5': 150, '7': 400, '1': 700 },
             { '5': 50, '7': 300, '2': 700 },
+            { '1': 50, '4': 150, '5': 400, '2': 670 },
+            { '5': 50, '7': 300, '1': 700 },
         ];
         return Building;
     }());
-    var CloudScene = (function (_super) {
+    var CloudScene = /** @class */ (function (_super) {
         __extends(CloudScene, _super);
         function CloudScene(player, game) {
-            _super.call(this, player, game);
-            this.enemiesTotal = 4;
-            for (var i = 0; i < this.enemiesTotal; i++) {
-                this.enemies.push(new Cloud(game.add.sprite(200 * i + game.rnd.between(0, 20), game.rnd.between(0, 20), 'stormcloud'), game, i, player, this.buildings));
+            var _this = _super.call(this, player, game) || this;
+            _this.enemiesTotal = 5;
+            for (var i = 0; i < _this.enemiesTotal; i++) {
+                _this.enemies.push(new Cloud(game.add.sprite(200 * i + game.rnd.between(0, 20), game.rnd.between(0, 20), 'stormcloud'), game, i, player, _this.buildings));
             }
+            return _this;
         }
         return CloudScene;
     }(Scene));
-    var SunScene = (function (_super) {
+    var SunScene = /** @class */ (function (_super) {
         __extends(SunScene, _super);
         function SunScene(player, game) {
-            _super.call(this, player, game);
-            this.enemiesTotal = 1;
-            for (var i = 0; i < this.enemiesTotal; i++) {
-                this.enemies.push(new Sun(game.add.sprite(400, 0, 'sun'), game, i, player, this.buildings));
+            var _this = _super.call(this, player, game) || this;
+            _this.enemiesTotal = 1;
+            for (var i = 0; i < _this.enemiesTotal; i++) {
+                _this.enemies.push(new Sun(game.add.sprite(400, 0, 'sun'), game, i, player, _this.buildings));
             }
+            return _this;
         }
         return SunScene;
     }(Scene));
