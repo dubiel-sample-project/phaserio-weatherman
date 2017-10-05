@@ -183,25 +183,6 @@ var Weatherman;
         MainGame.rgb2hex = function (red, green, blue) {
             return blue | (green << 8) | (red << 16);
         };
-        // preload() {
-        //     this.game.load.image('sky', 'assets/sky.png');
-        //     this.game.load.image('ground', 'assets/platform.png');
-        //     this.game.load.image('star', 'assets/star.png');
-        //     this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
-        //     this.game.load.image('bullet', 'assets/bullet.png');
-        //     this.game.load.image('raindrop', 'assets/raindrop.png');
-        //     this.game.load.image('stormcloud', 'assets/stormcloud3.png');
-        //     this.game.load.image('lightning', 'assets/lightning.png');
-        //     this.game.load.image('sun', 'assets/sun7.png');
-        //     this.game.load.image('sunray', 'assets/sunray3.png');
-        //     this.game.load.image('heatwave', 'assets/heatwave2.png');
-        //     this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
-        //     this.game.load.atlas('building1', 'assets/building1.png', 'assets/building1.json');
-        //     this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
-        //     this.game.load.atlas('building4', 'assets/building4.png', 'assets/building4.json');
-        //     this.game.load.atlas('building5', 'assets/building5.png', 'assets/building5.json');
-        //     this.game.load.atlas('building7', 'assets/building7.png', 'assets/building7.json');
-        // }
         MainGame.prototype.create = function () {
             applyMixins(Character, [Explodable]);
             applyMixins(Building, [Explodable]);
@@ -338,7 +319,7 @@ var Weatherman;
                 this.firstBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.target.getSprite()));
                 var bullet = this.firstBullets.getFirstExists(false);
                 bullet.___damage = game.rnd.between(0, this.firstBulletsMaxDamage);
-                bullet.reset(this.sprite.x + this.sprite.anchor.x, this.sprite.y + this.sprite.anchor.y);
+                bullet.reset(this.sprite.x, this.sprite.y);
                 game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.firstBulletsSpeed);
             }
         };
@@ -348,7 +329,10 @@ var Weatherman;
                 this.secondBullets.setAll('rotation', game.physics.arcade.angleBetween(this.sprite, this.target.getSprite()));
                 var bullet = this.secondBullets.getFirstExists(false);
                 bullet.___damage = game.rnd.between(0, this.secondBulletsMaxDamage);
-                bullet.reset(this.sprite.x + this.sprite.anchor.x, this.sprite.y + this.sprite.anchor.y);
+                bullet.reset(this.sprite.x, this.sprite.y);
+                // if(this.target instanceof Building) {
+                //     console.log('building id2: ' + this.target.getId());
+                // }
                 game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.secondBulletsSpeed);
             }
         };
@@ -467,7 +451,6 @@ var Weatherman;
             this.sprite.tint = 0xffffff;
         };
         Player.prototype.fire = function (game) {
-            // console.log('player.fire');
             if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
                 this.resetFirstFireCoolDown(game);
                 var bullet = this.firstBullets.getFirstExists(false);
@@ -544,16 +527,27 @@ var Weatherman;
             if (!this.isAlive()) {
                 return;
             }
+            this.sprite.tint = this.currentTint;
+            var temp = [];
+            for (var _i = 0, _a = this.buildings; _i < _a.length; _i++) {
+                var building = _a[_i];
+                if (building.isAlive()) {
+                    temp.push(building);
+                }
+                game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
+                game.physics.arcade.overlap(this.secondBullets, building.getSprite(), building.bulletHit, null, building);
+            }
+            this.buildings = temp;
+            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
+            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
             this.target = this.player;
-            if ((game.rnd.between(1, 5) % 2) != 0) {
+            if ((game.rnd.between(1, 9) % 3) != 0) {
+                // console.log('buildings.length: ' + this.buildings.length);
                 this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
                 if (!this.target.isAlive()) {
                     this.target = this.player;
                 }
             }
-            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
-            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
-            this.sprite.tint = this.currentTint;
             this.fire(game);
         };
         Cloud.prototype.checkBulletHit = function (game, bullets) {
@@ -636,41 +630,39 @@ var Weatherman;
             this.rotationSpeed -= this.rotationSpeedIncrementor;
             this.sprite.rotation += this.rotationSpeed;
             this.sprite.tint = this.currentTint;
+            var temp = [];
+            for (var _i = 0, _a = this.buildings; _i < _a.length; _i++) {
+                var building = _a[_i];
+                if (building.isAlive()) {
+                    temp.push(building);
+                }
+                game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
+                game.physics.arcade.overlap(this.secondBullets, building.getSprite(), building.bulletHit, null, building);
+            }
+            this.buildings = temp;
+            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
+            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
             this.target = this.player;
-            if ((game.rnd.between(1, 3) % 2) != 0) {
+            if ((game.rnd.between(1, 9) % 3) != 0) {
+                // console.log('buildings.length: ' + this.buildings.length);
                 this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
                 if (!this.target.isAlive()) {
                     this.target = this.player;
                 }
             }
-            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
-            this.fireSecond(game);
-            if (this.target == this.player) {
-                game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
-            }
-            else {
-                // let temp = [];
-                for (var _i = 0, _a = this.buildings; _i < _a.length; _i++) {
-                    var building = _a[_i];
-                    // if(building.isAlive()) {
-                    //     temp.push(building);
-                    // }
-                    game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
-                }
-                // this.buildings = temp;
-            }
-            this.fireFirst(game);
+            // if(this.target instanceof Building) {
+            //     console.log('building id: ' + this.target.getId());
+            // }
+            this.fire(game);
         };
         Sun.prototype.checkBulletHit = function (game, bullets) {
             game.physics.arcade.overlap(bullets, this.sprite, this.bulletHit, null, this);
         };
         Sun.prototype.bulletHit = function (object, bullet) {
-            // console.log('sun.bulletHit');
             bullet.kill();
             this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
             this.rotationSpeedIncrementor += 0.0002;
-            // this.sprite.y -= 1;
             this.firstFireCoolDownPause -= 50;
             if (this.firstFireCoolDownPause < 600) {
                 this.firstFireCoolDownPause = 600;
@@ -694,7 +686,7 @@ var Weatherman;
     var Building = /** @class */ (function () {
         function Building(id, x, game) {
             this.id = id;
-            this.hp = game.rnd.between(100, 300);
+            this.hp = game.rnd.between(1000, 3000);
             this.originalHp = this.hp;
             this.sprite = game.add.sprite(x, 0, 'building' + this.id, 'building' + this.id + '_1.png');
             this.sprite.y = game.world.height - 64 - this.sprite.height;
@@ -702,6 +694,9 @@ var Weatherman;
             game.physics.arcade.enable(this.sprite);
             this.createExplosion(game);
         }
+        Building.prototype.getId = function () {
+            return this.id;
+        };
         Building.prototype.getSprite = function () {
             return this.sprite;
         };

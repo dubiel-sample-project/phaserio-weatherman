@@ -304,7 +304,7 @@ export module Weatherman {
 
                 let bullet = this.firstBullets.getFirstExists(false);
                 bullet.___damage = game.rnd.between(0, this.firstBulletsMaxDamage);
-                bullet.reset(this.sprite.x + this.sprite.anchor.x, this.sprite.y + this.sprite.anchor.y);
+                bullet.reset(this.sprite.x, this.sprite.y);
 
                 game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.firstBulletsSpeed);
             }
@@ -318,7 +318,11 @@ export module Weatherman {
 
                 let bullet = this.secondBullets.getFirstExists(false);
                 bullet.___damage = game.rnd.between(0, this.secondBulletsMaxDamage);
-                bullet.reset(this.sprite.x + this.sprite.anchor.x, this.sprite.y + this.sprite.anchor.y);
+                bullet.reset(this.sprite.x, this.sprite.y);
+
+                // if(this.target instanceof Building) {
+                //     console.log('building id2: ' + this.target.getId());
+                // }
 
                 game.physics.arcade.moveToObject(bullet, this.target.getSprite(), this.secondBulletsSpeed);
             }
@@ -474,8 +478,6 @@ export module Weatherman {
         }
 
         fire(game: Phaser.Game) {
-            // console.log('player.fire');
-
             if (this.canFire(game, this.firstFireCoolDown) && this.firstBullets.countDead() > 0) {
                 this.resetFirstFireCoolDown(game);
 
@@ -571,16 +573,29 @@ export module Weatherman {
                return;
            }
 
-           this.target = this.player;
-           if((game.rnd.between(1, 5) % 2) != 0) {
-               this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
-               if(!this.target.isAlive()) {
-                   this.target = this.player;
-               }
-           }
-            game.physics.arcade.overlap(this.firstBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
-            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
             this.sprite.tint = this.currentTint;
+
+            let temp = [];
+            for(let building of this.buildings) {
+                if(building.isAlive()) {
+                    temp.push(building);
+                }
+                game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
+                game.physics.arcade.overlap(this.secondBullets, building.getSprite(), building.bulletHit, null, building);
+            }
+            this.buildings = temp;
+
+            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
+            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+
+            this.target = this.player;
+            if((game.rnd.between(1, 9) % 3) != 0) {
+                // console.log('buildings.length: ' + this.buildings.length);
+                this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
+                if(!this.target.isAlive()) {
+                    this.target = this.player;
+                }
+            }
 
             this.fire(game);
         }
@@ -692,29 +707,32 @@ export module Weatherman {
             this.sprite.rotation += this.rotationSpeed;
             this.sprite.tint = this.currentTint;
 
+            let temp = [];
+            for(let building of this.buildings) {
+                if(building.isAlive()) {
+                    temp.push(building);
+                }
+                game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
+                game.physics.arcade.overlap(this.secondBullets, building.getSprite(), building.bulletHit, null, building);
+            }
+            this.buildings = temp;
+
+            game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
+            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
+
             this.target = this.player;
-            if((game.rnd.between(1, 3) % 2) != 0) {
+            if((game.rnd.between(1, 9) % 3) != 0) {
+                // console.log('buildings.length: ' + this.buildings.length);
                 this.target = this.buildings[game.rnd.between(0, this.buildings.length - 1)];
                 if(!this.target.isAlive()) {
                     this.target = this.player;
                 }
             }
-            game.physics.arcade.overlap(this.secondBullets, this.target.getSprite(), this.target.bulletHit, null, this.target);
-            this.fireSecond(game);
+            // if(this.target instanceof Building) {
+            //     console.log('building id: ' + this.target.getId());
+            // }
 
-            if(this.target == this.player) {
-                game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
-            } else {
-                // let temp = [];
-                for(let building of this.buildings) {
-                    // if(building.isAlive()) {
-                    //     temp.push(building);
-                    // }
-                    game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
-                }
-                // this.buildings = temp;
-            }
-            this.fireFirst(game);
+            this.fire(game);
         }
 
         checkBulletHit(game: Phaser.Game, bullets: Phaser.Group) {
@@ -722,13 +740,10 @@ export module Weatherman {
         }
 
         bulletHit(object, bullet) {
-            // console.log('sun.bulletHit');
-
             bullet.kill();
             this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
             this.rotationSpeedIncrementor += 0.0002;
-            // this.sprite.y -= 1;
 
             this.firstFireCoolDownPause -= 50;
             if(this.firstFireCoolDownPause < 600) {
@@ -773,7 +788,7 @@ export module Weatherman {
 
         constructor(id: string, x:number, game: Phaser.Game) {
             this.id = id
-            this.hp = game.rnd.between(100, 300);
+            this.hp = game.rnd.between(1000, 3000);
             this.originalHp = this.hp;
 
             this.sprite = game.add.sprite(x, 0, 'building' + this.id, 'building' + this.id + '_1.png');
@@ -783,6 +798,10 @@ export module Weatherman {
             game.physics.arcade.enable(this.sprite);
 
             this.createExplosion(game);
+        }
+
+        public getId() {
+            return this.id;
         }
 
         public getSprite(): Phaser.Sprite {
