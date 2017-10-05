@@ -2,93 +2,76 @@
 
 export module Weatherman {
     export class Game {
-
-        static rgb2hex(red, green, blue) {
-            return blue | (green << 8) | (red << 16);
-        }
-
         game: Phaser.Game;
-        platforms: Phaser.Group;
-        cursors: Phaser.CursorKeys;
-        player: Player;
-        scene: Scene;
-        buildings: any;
 
         constructor() {
-            this.game = new Phaser.Game(800, 600, Phaser.AUTO, 'content', { preload: this.preload, create: this.create, update: this.update });
+            this.game = new Phaser.Game(800, 600, Phaser.AUTO, 'content', {});
+            this.game.state.add('Intro', Weatherman.Intro, true);
+            this.game.state.add('CloudGame', Weatherman.CloudGame, false);
+            this.game.state.add('SunGame', Weatherman.SunGame, false);
         }
+    }
+
+    export class Intro {
+        game: Phaser.Game;
+        flashCoolDown: number;
+        startTime: number;
+        alertTextAdded: boolean;
+        mainTextAdded: boolean;
+        helpTextAdded: boolean;
 
         preload() {
-            this.game.load.image('sky', 'assets/sky.png');
-            this.game.load.image('ground', 'assets/platform.png');
-            this.game.load.image('star', 'assets/star.png');
-            this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
-            this.game.load.image('bullet', 'assets/bullet.png');
-            this.game.load.image('raindrop', 'assets/raindrop.png');
-            this.game.load.image('stormcloud', 'assets/stormcloud3.png');
-            this.game.load.image('lightning', 'assets/lightning.png');
-            this.game.load.image('sun', 'assets/sun7.png');
-            this.game.load.image('sunray', 'assets/sunray3.png');
-            this.game.load.image('heatwave', 'assets/heatwave2.png');
-            this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
-            this.game.load.atlas('building1', 'assets/building1.png', 'assets/building1.json');
-            this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
-            this.game.load.atlas('building4', 'assets/building4.png', 'assets/building4.json');
-            this.game.load.atlas('building5', 'assets/building5.png', 'assets/building5.json');
-            this.game.load.atlas('building7', 'assets/building7.png', 'assets/building7.json');
+            this.game.load.image('stormyweather', 'assets/building4_1.png');
+            this.game.load.image('heatwaveweather', 'assets/building5_1.png');
         }
 
         create() {
-            applyMixins(Character, [Explodable]);
-            applyMixins(Building, [Explodable]);
-
             this.game.physics.startSystem(Phaser.Physics.ARCADE);
+            this.flashCoolDown = this.game.time.now;
+            this.startTime = this.game.time.now;
+            this.alertTextAdded = false;
+            this.mainTextAdded = false;
+            this.helpTextAdded = false;
+            this.game.camera.flash(0xff0000, 700);
 
-            this.game.add.sprite(0, 0, 'sky');
+            let stormyWeatherImage = this.game.add.sprite(100, 300, 'stormyweather');
+            stormyWeatherImage.inputEnabled = true;
+            stormyWeatherImage.events.onInputDown.add(function(){
+                this.game.state.start('CloudGame');
+            }, this);
 
-            this.platforms = this.game.add.group();
-            this.platforms.enableBody = true;
-
-            let ground = this.platforms.create(0, this.game.world.height - 64, 'ground');
-            ground.scale.setTo(2, 2);
-            ground.body.immovable = true;
-
-            this.player = new Player(
-                this.game.add.sprite(32, this.game.world.height - 150, 'weatherman'),
-                this.game
-            );
-
-            // this.scene = new CloudScene(this.player, this.game);
-            this.scene = new SunScene(this.player, this.game);
-            this.player.getSprite().bringToTop();
-
-            this.cursors = this.game.input.keyboard.createCursorKeys();
+            let heatwaveWeatherImage = this.game.add.sprite(100, 450, 'heatwaveweather');
+            heatwaveWeatherImage.inputEnabled = true;
+            heatwaveWeatherImage.events.onInputDown.add(function(){
+                this.game.state.start('SunGame');
+            }, this);
         }
 
         update() {
-            this.game.physics.arcade.collide(this.player.getSprite(), this.platforms);
-
-            this.player.update(this.game);
-            this.scene.update(this.game);
-
-            this.player.move(0, 'left');
-
-            if (this.cursors.left.isDown) {
-                this.player.move(-150, 'left');
-            }
-            else if (this.cursors.right.isDown) {
-                this.player.move(150, 'right');
-            }
-            else {
-                this.player.stop();
+            if(this.game.time.now > this.flashCoolDown + 1500) {
+                this.flashCoolDown = this.game.time.now;
+                this.game.camera.flash(0xff0000, 700);
             }
 
-            if (this.cursors.up.isDown) {
-                this.player.moveUp(-350);
+            if(!this.alertTextAdded) {
+                this.alertTextAdded = true;
+                var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
+                let text = this.game.add.text(0, 0, "Weather Alert! Weather Alert!", style);
+                text.setTextBounds(0, 100, 800, 100);
             }
 
-            if (this.game.input.activePointer.isDown) {
-                this.player.fire(this.game);
+            if(!this.mainTextAdded && this.game.time.now > this.startTime + 2000) {
+                this.mainTextAdded = true;
+                var style = { font: "bold 32px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
+                let text = this.game.add.text(0, 0, "Save the city from the bad weather, Weatherman!", style);
+                text.setTextBounds(0, 150, 800, 100);
+            }
+
+            if(!this.helpTextAdded && this.game.time.now > this.startTime + 6000) {
+                this.helpTextAdded = true;
+                var style = { font: "bold 16px Arial", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
+                let text = this.game.add.text(0, 0, "uh, click one of the pictures below to play", style);
+                text.setTextBounds(0, 200, 800, 100);
             }
         }
     }
@@ -122,6 +105,116 @@ export module Weatherman {
                 explosionAnimation.reset(x, y);
                 explosionAnimation.play('explosion', 30, false, true);
             }
+        }
+    }
+
+    abstract class MainGame {
+        static rgb2hex(red, green, blue) {
+            return blue | (green << 8) | (red << 16);
+        }
+
+        game: Phaser.Game;
+        platforms: Phaser.Group;
+        cursors: Phaser.CursorKeys;
+        player: Player;
+        scene: Scene;
+
+        protected abstract createScene(player: Player, game: Phaser.Game): Scene;
+
+        create() {
+            applyMixins(Character, [Explodable]);
+            applyMixins(Building, [Explodable]);
+
+            this.game.physics.startSystem(Phaser.Physics.ARCADE);
+
+            this.game.add.sprite(0, 0, 'sky');
+
+            this.platforms = this.game.add.group();
+            this.platforms.enableBody = true;
+
+            let ground = this.platforms.create(0, this.game.world.height - 64, 'ground');
+            ground.scale.setTo(2, 2);
+            ground.body.immovable = true;
+
+            this.player = new Player(
+                this.game.add.sprite(32, this.game.world.height - 150, 'weatherman'),
+                this.game
+            );
+
+            this.scene = this.createScene(this.player, this.game);
+            this.player.getSprite().bringToTop();
+            this.cursors = this.game.input.keyboard.createCursorKeys();
+        }
+
+        update() {
+            this.game.physics.arcade.collide(this.player.getSprite(), this.platforms);
+
+            this.player.update(this.game);
+            this.scene.update(this.game);
+
+            this.player.move(0, 'left');
+
+            if (this.cursors.left.isDown) {
+                this.player.move(-150, 'left');
+            }
+            else if (this.cursors.right.isDown) {
+                this.player.move(150, 'right');
+            }
+            else {
+                this.player.stop();
+            }
+
+            if (this.cursors.up.isDown) {
+                this.player.moveUp(-350);
+            }
+
+            if (this.game.input.activePointer.isDown) {
+                this.player.fire(this.game);
+            }
+        }
+    }
+
+    export class CloudGame extends MainGame {
+        preload() {
+            this.game.load.image('sky', 'assets/sky.png');
+            this.game.load.image('ground', 'assets/platform.png');
+            this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
+            this.game.load.image('bullet', 'assets/bullet.png');
+            this.game.load.image('raindrop', 'assets/raindrop.png');
+            this.game.load.image('stormcloud', 'assets/stormcloud3.png');
+            this.game.load.image('lightning', 'assets/lightning.png');
+            this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
+            this.game.load.atlas('building1', 'assets/building1.png', 'assets/building1.json');
+            this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
+            this.game.load.atlas('building4', 'assets/building4.png', 'assets/building4.json');
+            this.game.load.atlas('building5', 'assets/building5.png', 'assets/building5.json');
+            this.game.load.atlas('building7', 'assets/building7.png', 'assets/building7.json');
+        }
+
+        protected createScene(player: Player, game: Phaser.Game) {
+            return new CloudScene(player, game);
+        }
+    }
+
+    export class SunGame extends MainGame {
+        preload() {
+            this.game.load.image('sky', 'assets/sky.png');
+            this.game.load.image('ground', 'assets/platform.png');
+            this.game.load.spritesheet('weatherman', 'assets/dude.png', 32, 48);
+            this.game.load.image('bullet', 'assets/bullet.png');
+            this.game.load.image('sun', 'assets/sun7.png');
+            this.game.load.image('sunray', 'assets/sunray3.png');
+            this.game.load.image('heatwave', 'assets/heatwave2.png');
+            this.game.load.spritesheet('explosion', 'assets/explosion.png', 64, 64, 23);
+            this.game.load.atlas('building1', 'assets/building1.png', 'assets/building1.json');
+            this.game.load.atlas('building2', 'assets/building2.png', 'assets/building2.json');
+            this.game.load.atlas('building4', 'assets/building4.png', 'assets/building4.json');
+            this.game.load.atlas('building5', 'assets/building5.png', 'assets/building5.json');
+            this.game.load.atlas('building7', 'assets/building7.png', 'assets/building7.json');
+        }
+
+        protected createScene(player: Player, game: Phaser.Game) {
+            return new SunScene(player, game);
         }
     }
 
@@ -267,6 +360,10 @@ export module Weatherman {
 
         update(game: Phaser.Game) {
             if(!this.running) {
+                if (game.input.activePointer.isDown) {
+                    game.state.start('Intro');
+                }
+
                 return;
             }
 
@@ -289,7 +386,6 @@ export module Weatherman {
             }
 
             if(!enemiesAlive) {
-                console.log('you won');
                 this.gameWon(game);
                 return;
             }
@@ -302,7 +398,6 @@ export module Weatherman {
             }
 
             if(!buildingsAlive) {
-                console.log('you lost');
                 this.gameLost(game);
                 return;
             }
@@ -385,7 +480,7 @@ export module Weatherman {
                 this.resetFirstFireCoolDown(game);
 
                 let bullet = this.firstBullets.getFirstExists(false);
-                bullet.lifespan = 300;
+                bullet.lifespan = 250;
                 bullet.___damage = game.rnd.between(10, 20);
                 bullet.reset(this.sprite.x, this.sprite.y);
                 bullet.rotation = game.physics.arcade.moveToPointer(bullet, 1000, game.input.activePointer);
@@ -431,7 +526,7 @@ export module Weatherman {
             super("Cloud" + i, 200, sprite, game);
 
             this.sprite.body.collideWorldBounds = true;
-            this.currentTint = Game.rgb2hex(96, 96, 96);
+            this.currentTint = MainGame.rgb2hex(96, 96, 96);
             this.sprite.tint = this.currentTint;
             this.sprite.anchor.setTo(0.5, 0.5);
 
@@ -505,7 +600,7 @@ export module Weatherman {
             this.sprite.scale.setTo(scale, scale);
 
             let newTint = Math.round((1.0 - scale) * (255 - 96) + 96);
-            this.currentTint = Game.rgb2hex(newTint, newTint, newTint);
+            this.currentTint = MainGame.rgb2hex(newTint, newTint, newTint);
 
             if (this.hp <= 0)
             {
@@ -610,11 +705,11 @@ export module Weatherman {
             if(this.target == this.player) {
                 game.physics.arcade.overlap(this.firstBullets, this.player.getSprite(), this.player.bulletHit, null, this.player);
             } else {
-                let temp = [];
+                // let temp = [];
                 for(let building of this.buildings) {
-                    if(building.isAlive()) {
-                        temp.push(building);
-                    }
+                    // if(building.isAlive()) {
+                    //     temp.push(building);
+                    // }
                     game.physics.arcade.overlap(this.firstBullets, building.getSprite(), building.bulletHit, null, building);
                 }
                 // this.buildings = temp;
@@ -664,7 +759,7 @@ export module Weatherman {
             {'2' : 20, '5' : 150, '7' : 400, '1': 700},
             {'5' : 50, '7' : 300, '2' : 700},
             {'1' : 50, '4' : 150, '5': 400, '2' : 670},
-            {'5' : 50, '7' : 300, '1' : 700},
+            {'5' : 50, '7' : 300, '1' : 670},
         ];
 
         sprite: Phaser.Sprite;
@@ -695,7 +790,7 @@ export module Weatherman {
         }
 
         public update(game: Phaser.Game) {
-            this.sprite.tint = 0xffffff;
+            // this.sprite.tint = 0xffffff;
         }
 
         public isAlive() {
@@ -703,10 +798,8 @@ export module Weatherman {
         }
 
         bulletHit(object, bullet): boolean {
-            // console.log('building.bulletHit');
-
             bullet.kill();
-            this.sprite.tint = 0xa00000;
+            // this.sprite.tint = 0xa00000;
             this.hp -= bullet.___damage;
 
             this.playExplosion(this.sprite.x + this.sprite.width / 2, this.sprite.y + this.sprite.height / 2);
