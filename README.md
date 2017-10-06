@@ -1,7 +1,7 @@
 # phaserio-weatherman
 WeatherMan Demo Game, written in phaser.io (http://phaser.io/)
 
-This is a simple demonstration project written in TypesScript highlighting some of the features of phaser.io. It is based on the idea of Weatherman defeating the bad weather and saving the city.
+This is a simple demonstration project written in TypeScript highlighting some of the features of phaser.io. It is based on the idea of Weatherman defeating the bad weather and saving the city.
 
 Some concepts utilized:
 
@@ -26,4 +26,4 @@ Some concepts utilized:
 
 ## Contributing:
 
-if you are interested in improving or expanding this project, please feel free to do so by forking it and creating a pull request. If you just want to use it for your own purposes, that's fine too, but please give credit where it's due. 
+If you are interested in improving or expanding this project, please feel free to do so by forking it and creating a pull request. If you just want to use it for your own purposes, that's fine too, but please give credit where it's due.
